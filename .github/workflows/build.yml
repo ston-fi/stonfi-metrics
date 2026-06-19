@@ -1,0 +1,41 @@
+name: Build-Test
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_default_features:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+      - run: rustup toolchain install nightly
+      - run: rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
+      - run: cargo +nightly fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test --lib --all --verbose
+
+  build_all_features:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --all --all-features --verbose
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test --lib --all --all-features

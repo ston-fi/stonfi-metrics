@@ -1,0 +1,35 @@
+[package]
+name = "stonfi_metrics"
+description = "Prometheus metrics helpers for STON.fi Rust services"
+version = "0.0.1"
+
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+readme = "README.md"
+publish = true
+
+include = [
+    "AGENTS.md",
+    "Cargo.toml",
+    "README.md",
+    "src/*",
+    "examples/*",
+]
+
+[dependencies]
+anyhow.workspace = true
+parking_lot.workspace = true
+prometheus.workspace = true
+tokio.workspace = true
+axum.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+reqwest.workspace = true
+tokio.workspace = true
+
+[[example]]
+name = "simple_init"
