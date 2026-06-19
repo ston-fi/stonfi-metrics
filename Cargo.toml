@@ -1,26 +1,37 @@
-[workspace]
-resolver = "2"
-members = [
-    "crates/metrics",
-]
-
-[workspace.package]
+[package]
+name = "stonfi_metrics"
+description = "Prometheus metrics helpers for STON.fi Rust services"
+version = "0.0.1"
 edition = "2024"
 authors = ["STON.fi", "Sild <silddev@pm.com"]
 license = "Apache-2.0"
-repository = "https://github.com/ston-fi/stonfi-rust"
+repository = "https://github.com/ston-fi/stonfi-metrics"
 rust-version = "1.85"
 readme = "README.md"
-publish = false
+publish = true
 
-[workspace.dependencies]
+include = [
+    "AGENTS.md",
+    "Cargo.toml",
+    "README.md",
+    "src/*",
+    "examples/*",
+]
+
+[dependencies]
 anyhow = "1"
 axum = "0.8"
 parking_lot = "0.12"
 prometheus = "0.14"
-reqwest = "0.12"
 tokio = { version = "1", features = ["macros", "net", "rt", "rt-multi-thread", "sync", "time"] }
 tracing = "0.1"
+
+[dev-dependencies]
+reqwest = "0.12"
+tokio = { version = "1", features = ["macros", "net", "rt", "rt-multi-thread", "sync", "time"] }
+
+[[example]]
+name = "simple_init"
 
 [profile.release]
 debug = true
