@@ -7,6 +7,7 @@ use stonfi_metrics::constants::DURATION_BUCKETS_1MS_20S;
 use stonfi_metrics::{MetricsCell, track_duration};
 
 static METRICS: MetricsCell<Metrics> = MetricsCell::new();
+stonfi_metrics::register_metrics!(Metrics, METRICS);
 
 struct Metrics {
     requests_total: IntCounterVec,
@@ -37,19 +38,18 @@ impl Metrics {
     }
 }
 
-stonfi_metrics::register_metrics!(Metrics, METRICS);
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let metrics_server = stonfi_metrics::init_metrics!("127.0.0.1:0").await?;
-
-    Metrics::inc_requests("GET");
-    let _timer = track_duration!(METRICS.request_duration, &["GET"]);
-    tokio::time::sleep(Duration::from_millis(10)).await;
-
     println!(
-        "metrics listening on http://{}/metrics",
+        "listening on http://{}/metrics",
         metrics_server.listen_address()
     );
+    Metrics::inc_requests("GET");
+    {
+        let _timer = track_duration!(METRICS.request_duration, &["GET"]);
+        tokio::time::sleep(Duration::from_secs(5)).await;
+    }
+
     metrics_server.stop().await
 }

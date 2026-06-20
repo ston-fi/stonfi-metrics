@@ -8,10 +8,10 @@
   metadata labels;
 - `init_metrics_impl` starts the same endpoint with explicit version, commit,
   and author labels;
-- `register_metrics!(Metrics, METRICS)` registers module-owned metrics for automatic
-  initialization during `init_metrics!` / `init_metrics_impl`;
-- `MetricsCell` stores fallibly initialized module metrics while still allowing
-  direct field access after startup;
+- `register_metrics!(Metrics, METRICS)` registers module-owned metrics for
+  automatic initialization during `init_metrics!` / `init_metrics_impl`;
+- `MetricsCell` stores fallibly initialized metrics and still allows direct
+  field access after startup;
 - `MetricsServer::stop()` provides awaited shutdown, with best-effort shutdown
   on drop;
 - `CacheStatsMetric` records cache request and miss counters;
@@ -77,8 +77,9 @@ stonfi_metrics::register_metrics!(Metrics, METRICS);
 The macro assumes `Metrics::new() -> anyhow::Result<Metrics>` and
 `static METRICS: MetricsCell<Metrics>`. `init_metrics!` / `init_metrics_impl`
 initialize the cell before the metrics server starts, so code that runs after
-startup can access fields directly through `METRICS`. The struct, static, and
-helper methods can remain private to the module.
+startup can access fields directly through `METRICS`. Construction errors are
+returned from startup instead of being hidden behind first metric use. The
+struct, static, and helper methods can remain private to the module.
 
 ## Duration Tracking
 
@@ -97,4 +98,7 @@ cargo test
 cargo check --example simple_init
 cargo +nightly fmt --check
 cargo clippy --all-targets --all-features -- -D warnings
+RUSTDOCFLAGS='-D warnings' cargo doc --no-deps
+cargo package --allow-dirty --list
+cargo publish --dry-run --allow-dirty
 ```

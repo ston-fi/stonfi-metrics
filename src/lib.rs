@@ -14,7 +14,6 @@ pub mod server;
 pub mod utils;
 
 use crate::base_metrics::init_base_metrics;
-use crate::cache_stats_metric::init_cache_stats_metric;
 use crate::initializer::init_registered_metrics;
 use crate::server::MetricsServer;
 mod base_metrics;
@@ -49,28 +48,11 @@ macro_rules! init_metrics {
 macro_rules! register_metrics {
     ($metrics_ty:ty, $metrics_static:ident) => {
         const _: () = {
-            static __STONFI_METRICS_INIT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
             fn __stonfi_metrics_init() -> $crate::__private::anyhow::Result<()> {
-                let _guard = __STONFI_METRICS_INIT_LOCK.lock().map_err(|_| {
-                    $crate::__private::anyhow::anyhow!(
-                        "metrics initializer lock poisoned: {}",
-                        concat!(module_path!(), "::", stringify!($metrics_ty))
-                    )
-                })?;
-
-                if $metrics_static.get().is_some() {
-                    return Ok(());
-                }
-
-                $metrics_static.set(<$metrics_ty>::new()?).map_err(|_| {
-                    $crate::__private::anyhow::anyhow!(
-                        "metrics already initialized: {}",
-                        concat!(module_path!(), "::", stringify!($metrics_ty))
-                    )
-                })?;
-
-                Ok(())
+                $metrics_static.init(
+                    concat!(module_path!(), "::", stringify!($metrics_ty)),
+                    <$metrics_ty>::new,
+                )
             }
 
             $crate::__private::inventory::submit! {
@@ -94,7 +76,6 @@ pub async fn init_metrics_impl(
     author: &str,
 ) -> anyhow::Result<MetricsServer> {
     init_base_metrics(version, commit, author)?;
-    init_cache_stats_metric()?;
     init_registered_metrics()?;
     MetricsServer::start(listen_address).await
 }

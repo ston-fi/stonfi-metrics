@@ -19,13 +19,14 @@ uptime metadata, cache stats counters, and duration tracking helpers.
 - `init_metrics_impl(listen_address, version, commit, author)`: same startup
   path with explicit base label values. Prefer this when the default CI metadata
   does not match the consumer's build environment.
-- `register_metrics!(Metrics, METRICS)`: registers module-owned metrics for automatic
-  initialization during `init_metrics!` / `init_metrics_impl`. The consumer
-  module keeps `Metrics`, `METRICS`, and setters private; the macro expects
-  `Metrics::new() -> anyhow::Result<Metrics>` and
+- `register_metrics!(Metrics, METRICS)`: registers module-owned metrics for
+  automatic initialization during `init_metrics!` / `init_metrics_impl`. The
+  consumer module keeps `Metrics`, `METRICS`, and setters private; the macro
+  expects `Metrics::new() -> anyhow::Result<Metrics>` and
   `static METRICS: stonfi_metrics::MetricsCell<Metrics>`.
-- `MetricsCell`: fallibly initialized module metrics storage. It dereferences
-  to `Metrics` after startup so local setters can use direct field access.
+- `MetricsCell`: fallibly initialized metrics storage. It serializes
+  initialization, stores successful metrics once, and dereferences to `Metrics`
+  after startup so local setters can use direct field access.
 - `server::MetricsServer`: handle returned by initialization. Use
   `listen_address()` for the bound address and `stop().await` for awaited
   shutdown. Dropping the handle only signals shutdown.
@@ -69,15 +70,39 @@ Cache stats:
 - The crate uses the default global Prometheus registry. Tests or examples that
   register extra metrics should use unique metric names to avoid process-global
   registration conflicts.
+- Use `MetricsCell<T>` for fallible global metric storage. Do not add new
+  `Mutex<Option<T>>`, `OnceLock<Result<T, _>>`, or `LazyLock<T>` patterns for
+  metric handles.
+- Base metrics initialize explicitly because they need startup metadata labels.
+  Cache stats and consumer module metrics should use `register_metrics!`.
+  Keep all metric storage on `MetricsCell::init` so registration errors surface
+  from `init_metrics_impl`.
 - Registered module metrics should use one `MetricsCell<Metrics>` per module and
   one `register_metrics!(Metrics, METRICS)` invocation. Keep metric handles private and
   expose only the module-level setters needed by local callers.
 - Consumers should start the server through `init_metrics!` or
   `init_metrics_impl`; `MetricsServer::start` is intentionally crate-private.
 - Keep metric names stable once published.
+- Keep `src/metrics_cell.rs` focused on storage/initialization, and
+  `src/initializer.rs` focused on inventory registration.
+- Prefer deleting duplicate initialization code over adding new wrappers.
 - Keep docs direct and concise.
 - Do not broaden dependencies or add abstractions unless the crate gains a real
   public capability.
+
+## AI Development Notes
+
+- Start by reading this file, `README.md`, `src/lib.rs`, and the module being
+  changed.
+- For public API changes, update `README.md`, this guide, rustdoc, and the
+  example in the same commit.
+- For metrics changes, validate both startup initialization and post-startup
+  field access. Tests that touch the global Prometheus registry must use unique
+  metric names.
+- Keep generated or local planning files out of the published crate unless the
+  crate intentionally ships them.
+- Prefer one small commit in a task worktree. Do not touch the active checkout
+  when it contains unrelated user changes.
 
 ## Validation
 

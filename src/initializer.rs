@@ -34,9 +34,9 @@ mod tests {
         fn new() -> anyhow::Result<Self> {
             Ok(Self {
                 counter: prometheus::register_int_counter!(
-                "stonfi_metrics_register_macro_test_total",
-                "Test counter registered through stonfi_metrics::register_metrics"
-            )?,
+                    "stonfi_metrics_register_macro_test_total",
+                    "Test counter registered through stonfi_metrics::register_metrics"
+                )?,
             })
         }
     }
@@ -70,12 +70,11 @@ mod tests {
             option_env!("CI_COMMIT_SHORT_SHA").unwrap_or("local"),
             option_env!("GITLAB_USER_EMAIL").unwrap_or("local-dev"),
         )
-            .await?;
+        .await?;
 
         let _ = &TEST_REGISTER_MACRO_METRICS.counter;
 
         server.stop().await?;
         Ok(())
     }
-
 }
