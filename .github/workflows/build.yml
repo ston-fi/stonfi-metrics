@@ -22,6 +22,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
       - run: rustup toolchain install nightly
       - run: rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
       - run: cargo +nightly fmt --check
@@ -36,6 +37,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
       - run: cargo build --all-features --verbose
       - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: cargo test --lib --all-features

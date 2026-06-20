@@ -56,9 +56,10 @@ impl DurationTrackerVec<'_, '_, '_> {
 
 impl Drop for DurationTrackerVec<'_, '_, '_> {
     fn drop(&mut self) {
-        self.metric
-            .with_label_values(self.labels)
-            .observe(format_duration_ms(self.start.elapsed()));
+        match self.metric.get_metric_with_label_values(self.labels) {
+            Ok(metric) => metric.observe(format_duration_ms(self.start.elapsed())),
+            Err(error) => tracing::error!("failed to observe duration metric: {error}"),
+        }
     }
 }
 
@@ -73,4 +74,32 @@ macro_rules! track_duration {
     ($metric:expr, $labels:expr) => {
         $crate::duration_tracker::DurationTrackerVec::new(&$metric, $labels)
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
+    use prometheus::HistogramVec;
+
+    use super::DurationTrackerVec;
+
+    #[test]
+    fn test_duration_tracker_vec_drop_does_not_panic_on_label_mismatch() -> anyhow::Result<()> {
+        let metric = HistogramVec::new(
+            prometheus::HistogramOpts::new(
+                "stonfi_metrics_duration_tracker_vec_label_mismatch",
+                "Duration tracker vec label mismatch test",
+            ),
+            &["method"],
+        )?;
+
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            let tracker = DurationTrackerVec::new(&metric, &[]);
+            drop(tracker);
+        }));
+
+        assert!(result.is_ok());
+        Ok(())
+    }
 }

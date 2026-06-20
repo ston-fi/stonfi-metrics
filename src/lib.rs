@@ -12,10 +12,10 @@ pub mod duration_tracker;
 pub mod server;
 /// Formatting helpers used by metric recorders.
 pub mod utils;
-
 use crate::base_metrics::init_base_metrics;
 use crate::initializer::init_registered_metrics;
 use crate::server::MetricsServer;
+pub use prometheus; // re-export
 mod base_metrics;
 mod cache_stats_metric;
 mod initializer;

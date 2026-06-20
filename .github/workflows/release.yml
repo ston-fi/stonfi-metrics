@@ -10,14 +10,31 @@ permissions:
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   workflow_dispatch:
-    inputs:
 
 jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - run: rustup toolchain install nightly
+      - run: rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
+      - run: cargo test
+      - run: cargo check --example simple_init
+      - run: cargo +nightly fmt --check
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: RUSTDOCFLAGS='-D warnings' cargo doc --no-deps
+
   release-plz:
     name: Release-plz
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
