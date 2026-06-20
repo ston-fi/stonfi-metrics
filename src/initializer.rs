@@ -1,6 +1,6 @@
 /// Registered initializer for module-owned Prometheus metrics.
 ///
-/// Initializers are submitted by [`crate::register!`] and executed by
+/// Initializers are submitted by [`crate::register_metrics!`] and executed by
 /// [`crate::init_metrics_impl`] before the metrics HTTP server starts.
 pub struct MetricInitializer {
     /// Human-readable initializer name used in startup errors.

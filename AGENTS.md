@@ -19,7 +19,7 @@ uptime metadata, cache stats counters, and duration tracking helpers.
 - `init_metrics_impl(listen_address, version, commit, author)`: same startup
   path with explicit base label values. Prefer this when the default CI metadata
   does not match the consumer's build environment.
-- `register!(Metrics, METRICS)`: registers module-owned metrics for automatic
+- `register_metrics!(Metrics, METRICS)`: registers module-owned metrics for automatic
   initialization during `init_metrics!` / `init_metrics_impl`. The consumer
   module keeps `Metrics`, `METRICS`, and setters private; the macro expects
   `Metrics::new() -> anyhow::Result<Metrics>` and
@@ -69,7 +69,7 @@ Cache stats:
   register extra metrics should use unique metric names to avoid process-global
   registration conflicts.
 - Registered module metrics should use one `OnceLock<Metrics>` per module and
-  one `register!(Metrics, METRICS)` invocation. Keep metric handles private and
+  one `register_metrics!(Metrics, METRICS)` invocation. Keep metric handles private and
   expose only the module-level setters needed by local callers.
 - Consumers should start the server through `init_metrics!` or
   `init_metrics_impl`; `MetricsServer::start` is intentionally crate-private.

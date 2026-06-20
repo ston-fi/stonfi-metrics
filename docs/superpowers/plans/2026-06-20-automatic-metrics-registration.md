@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add `stonfi_metrics::register!(Metrics, METRICS)` so consumer modules can keep metric structs and statics private while `init_metrics_impl` initializes them automatically.
+**Goal:** Add `stonfi_metrics::register_metrics!(Metrics, METRICS)` so consumer modules can keep metric structs and statics private while `init_metrics_impl` initializes them automatically.
 
-**Architecture:** `stonfi_metrics` uses `inventory` to collect module-local metric initializers linked into the final binary. The `register!` macro generates a private initializer, a private per-registration init lock, and a module-local `Metrics::get() -> &'static Metrics` accessor. `init_metrics_impl` initializes built-in metrics, runs all registered metric initializers, then starts the HTTP server.
+**Architecture:** `stonfi_metrics` uses `inventory` to collect module-local metric initializers linked into the final binary. The `register_metrics!` macro generates a private initializer, a private per-registration init lock, and a module-local `Metrics::get() -> &'static Metrics` accessor. `init_metrics_impl` initializes built-in metrics, runs all registered metric initializers, then starts the HTTP server.
 
 **Tech Stack:** Rust 2024, `std::sync::OnceLock`, `inventory`, `anyhow`, Prometheus global registry, existing Axum metrics server.
 
@@ -15,7 +15,7 @@
 - Modify `Cargo.toml`: add `inventory = "0.3"` and include nested `src/initializer/*` test sources in the package.
 - Create `src/initializer.rs`: own `MetricInitializer`, `inventory::collect!`, `init_registered_metrics()`, and `#[cfg(test)] mod tests`.
 - Create `src/initializer/tests.rs`: module-local unit tests for registration, idempotency, generated getter, and startup initialization.
-- Modify `src/lib.rs`: define `register!`, call `init_registered_metrics()` from `init_metrics_impl`, and keep hidden macro support exports at the bottom of the file.
+- Modify `src/lib.rs`: define `register_metrics!`, call `init_registered_metrics()` from `init_metrics_impl`, and keep hidden macro support exports at the bottom of the file.
 - Modify `examples/simple_init.rs`: replace `LazyLock<Option<Metrics>>` with `OnceLock<Metrics>`, register the metrics, and use generated `Metrics::get()`.
 - Modify `README.md` and `AGENTS.md`: document the new API and private module-owned metrics pattern.
 
@@ -57,7 +57,7 @@ include = [
 ```rust
 /// Registered initializer for module-owned Prometheus metrics.
 ///
-/// Initializers are submitted by [`crate::register!`] and executed by
+/// Initializers are submitted by [`crate::register_metrics!`] and executed by
 /// [`crate::init_metrics_impl`] before the metrics HTTP server starts.
 pub struct MetricInitializer {
     /// Human-readable initializer name used in startup errors.
@@ -96,7 +96,7 @@ cargo check --lib
 
 Expected: pass.
 
-## Task 2: `register!` Macro
+## Task 2: `register_metrics!` Macro
 
 **Files:**
 - Modify: `src/lib.rs`
@@ -107,7 +107,7 @@ Expected: pass.
 Add a test metrics struct in `src/initializer/tests.rs`, invoke:
 
 ```rust
-crate::register!(TestRegisterMacroMetrics, TEST_REGISTER_MACRO_METRICS);
+crate::register_metrics!(TestRegisterMacroMetrics, TEST_REGISTER_MACRO_METRICS);
 ```
 
 Write tests that expect:
@@ -125,15 +125,15 @@ Run:
 cargo test initializer::tests::test_register_macro_initializes_metrics -- --exact
 ```
 
-Expected before implementation: compile failure because `register!` or generated `get()` is missing.
+Expected before implementation: compile failure because `register_metrics!` or generated `get()` is missing.
 
 - [ ] **Step 2: Implement macro**
 
-Add `register!` after `init_metrics!`:
+Add `register_metrics!` after `init_metrics!`:
 
 ```rust
 #[macro_export]
-macro_rules! register {
+macro_rules! register_metrics {
     ($metrics_ty:ty, $metrics_static:ident) => {
         const _: () = {
             static __STONFI_METRICS_INIT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -219,7 +219,7 @@ Use:
 ```rust
 static METRICS: OnceLock<Metrics> = OnceLock::new();
 
-stonfi_metrics::register!(Metrics, METRICS);
+stonfi_metrics::register_metrics!(Metrics, METRICS);
 ```
 
 Use generated getter after startup:
@@ -235,7 +235,7 @@ let _timer = track_duration!(Metrics::get().request_duration, &["GET"]);
 
 - [ ] **Step 2: Update docs**
 
-Document that `register!(Metrics, METRICS)` expects `Metrics::new() -> anyhow::Result<Metrics>` and `static METRICS: OnceLock<Metrics>`, and generates module-local `Metrics::get() -> &'static Metrics` for code that runs after successful startup.
+Document that `register_metrics!(Metrics, METRICS)` expects `Metrics::new() -> anyhow::Result<Metrics>` and `static METRICS: OnceLock<Metrics>`, and generates module-local `Metrics::get() -> &'static Metrics` for code that runs after successful startup.
 
 - [ ] **Step 3: Verify example and docs**
 
@@ -289,6 +289,6 @@ Expected: one validated commit.
 
 ## Self-Review
 
-- Spec coverage: implements `stonfi_metrics::register!(Metrics, METRICS)`, automatic startup initialization, private metric handles, generated module-local getter, no proc-macro crate, and docs/examples.
+- Spec coverage: implements `stonfi_metrics::register_metrics!(Metrics, METRICS)`, automatic startup initialization, private metric handles, generated module-local getter, no proc-macro crate, and docs/examples.
 - Placeholder scan: no unresolved placeholders or unspecified implementation steps remain.
-- Type consistency: all snippets use `initializer`, `MetricInitializer`, `init_registered_metrics`, `register!`, `OnceLock<Metrics>`, and `Metrics::new() -> anyhow::Result<Self>` consistently.
+- Type consistency: all snippets use `initializer`, `MetricInitializer`, `init_registered_metrics`, `register_metrics!`, `OnceLock<Metrics>`, and `Metrics::new() -> anyhow::Result<Self>` consistently.

@@ -41,7 +41,7 @@ impl Metrics {
     }
 }
 
-stonfi_metrics::register!(Metrics, METRICS);
+stonfi_metrics::register_metrics!(Metrics, METRICS);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

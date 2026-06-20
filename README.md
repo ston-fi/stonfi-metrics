@@ -8,7 +8,7 @@
   metadata labels;
 - `init_metrics_impl` starts the same endpoint with explicit version, commit,
   and author labels;
-- `register!(Metrics, METRICS)` registers module-owned metrics for automatic
+- `register_metrics!(Metrics, METRICS)` registers module-owned metrics for automatic
   initialization during `init_metrics!` / `init_metrics_impl`;
 - `MetricsServer::stop()` provides awaited shutdown, with best-effort shutdown
   on drop;
@@ -41,7 +41,7 @@ Use `init_metrics_impl` when the default compile-time metadata from
 
 ## Module-Owned Metrics
 
-Use `register!(Metrics, METRICS)` when a crate or module owns private metrics
+Use `register_metrics!(Metrics, METRICS)` when a crate or module owns private metrics
 that should be initialized automatically on app startup.
 
 ```rust
@@ -72,7 +72,7 @@ impl Metrics {
 
 static METRICS: OnceLock<Metrics> = OnceLock::new();
 
-stonfi_metrics::register!(Metrics, METRICS);
+stonfi_metrics::register_metrics!(Metrics, METRICS);
 ```
 
 The macro assumes `Metrics::new() -> anyhow::Result<Metrics>` and

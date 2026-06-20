@@ -11,13 +11,13 @@ impl TestRegisterMacroMetrics {
         Ok(Self {
             counter: prometheus::register_int_counter!(
                 "stonfi_metrics_register_macro_test_total",
-                "Test counter registered through stonfi_metrics::register"
+                "Test counter registered through stonfi_metrics::register_metrics"
             )?,
         })
     }
 }
 
-crate::register!(TestRegisterMacroMetrics, TEST_REGISTER_MACRO_METRICS);
+crate::register_metrics!(TestRegisterMacroMetrics, TEST_REGISTER_MACRO_METRICS);
 
 #[test]
 fn test_register_macro_initializes_metrics() -> anyhow::Result<()> {

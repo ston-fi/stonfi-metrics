@@ -1,7 +1,7 @@
 //! Prometheus helpers for STON.fi services.
 //!
 //! The crate starts an Axum `/metrics` endpoint, registers base uptime metrics,
-//! initializes module-owned metrics registered through [`register!`], and exposes
+//! initializes module-owned metrics registered through [`register_metrics!`], and exposes
 //! small helpers for cache statistics and duration tracking.
 
 /// Duration bucket constants for Prometheus histograms.
@@ -44,7 +44,7 @@ macro_rules! init_metrics {
 /// The target module must provide `static METRICS: OnceLock<Metrics>` and
 /// `Metrics::new() -> anyhow::Result<Metrics>`.
 #[macro_export]
-macro_rules! register {
+macro_rules! register_metrics {
     ($metrics_ty:ty, $metrics_static:ident) => {
         const _: () = {
             static __STONFI_METRICS_INIT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
