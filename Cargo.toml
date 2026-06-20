@@ -15,12 +15,14 @@ include = [
     "Cargo.toml",
     "README.md",
     "src/*",
+    "src/initializer/*",
     "examples/*",
 ]
 
 [dependencies]
 anyhow = "1"
 axum = "0.8"
+inventory = "0.3"
 parking_lot = "0.12"
 prometheus = "0.14"
 tokio = { version = "1", features = ["macros", "net", "rt", "rt-multi-thread", "sync", "time"] }

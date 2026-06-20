@@ -1,4 +1,4 @@
-use std::sync::LazyLock;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use prometheus::{
@@ -7,7 +7,7 @@ use prometheus::{
 use stonfi_metrics::constants::DURATION_BUCKETS_1MS_20S;
 use stonfi_metrics::track_duration;
 
-static METRICS: LazyLock<Option<Metrics>> = LazyLock::new(|| Metrics::new().ok());
+static METRICS: OnceLock<Metrics> = OnceLock::new();
 
 struct Metrics {
     requests_total: IntCounterVec,
@@ -34,21 +34,22 @@ impl Metrics {
     }
 
     fn inc_requests(label: &str) {
-        if let Some(metrics) = METRICS.as_ref() {
-            metrics.requests_total.with_label_values(&[label]).inc();
-        };
+        Metrics::get()
+            .requests_total
+            .with_label_values(&[label])
+            .inc();
     }
 }
+
+stonfi_metrics::register!(Metrics, METRICS);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let metrics_server = stonfi_metrics::init_metrics!("127.0.0.1:0").await?;
 
     Metrics::inc_requests("GET");
-    if let Some(metrics) = METRICS.as_ref() {
-        let _timer = track_duration!(metrics.request_duration, &["GET"]);
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
+    let _timer = track_duration!(Metrics::get().request_duration, &["GET"]);
+    tokio::time::sleep(Duration::from_millis(10)).await;
 
     println!(
         "metrics listening on http://{}/metrics",

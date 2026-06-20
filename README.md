@@ -8,6 +8,8 @@
   metadata labels;
 - `init_metrics_impl` starts the same endpoint with explicit version, commit,
   and author labels;
+- `register!(Metrics, METRICS)` registers module-owned metrics for automatic
+  initialization during `init_metrics!` / `init_metrics_impl`;
 - `MetricsServer::stop()` provides awaited shutdown, with best-effort shutdown
   on drop;
 - `CacheStatsMetric` records cache request and miss counters;
@@ -36,6 +38,48 @@ Use `init_metrics_impl` when the default compile-time metadata from
 
 - `cache_name`: cache identifier supplied by the caller;
 - `result`: `request` or `miss`.
+
+## Module-Owned Metrics
+
+Use `register!(Metrics, METRICS)` when a crate or module owns private metrics
+that should be initialized automatically on app startup.
+
+```rust
+use std::sync::OnceLock;
+
+pub(super) struct Metrics {
+    requests_total: prometheus::IntCounterVec,
+}
+
+impl Metrics {
+    fn new() -> anyhow::Result<Self> {
+        Ok(Self {
+            requests_total: prometheus::register_int_counter_vec!(
+                "my_module_requests_total",
+                "Total module requests",
+                &["kind"]
+            )?,
+        })
+    }
+
+    pub(super) fn inc_request(kind: &str) {
+        Metrics::get()
+            .requests_total
+            .with_label_values(&[kind])
+            .inc();
+    }
+}
+
+static METRICS: OnceLock<Metrics> = OnceLock::new();
+
+stonfi_metrics::register!(Metrics, METRICS);
+```
+
+The macro assumes `Metrics::new() -> anyhow::Result<Metrics>` and
+`static METRICS: OnceLock<Metrics>`. It also generates a module-local
+`Metrics::get() -> &'static Metrics` accessor for code that runs after metrics
+startup. The struct, static, and helper methods can remain private to the
+module.
 
 ## Duration Tracking
 
