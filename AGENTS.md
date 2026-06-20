@@ -23,8 +23,9 @@ uptime metadata, cache stats counters, and duration tracking helpers.
   initialization during `init_metrics!` / `init_metrics_impl`. The consumer
   module keeps `Metrics`, `METRICS`, and setters private; the macro expects
   `Metrics::new() -> anyhow::Result<Metrics>` and
-  `static METRICS: std::sync::OnceLock<Metrics>`, and generates a module-local
-  `Metrics::get() -> &'static Metrics` accessor.
+  `static METRICS: stonfi_metrics::MetricsCell<Metrics>`.
+- `MetricsCell`: fallibly initialized module metrics storage. It dereferences
+  to `Metrics` after startup so local setters can use direct field access.
 - `server::MetricsServer`: handle returned by initialization. Use
   `listen_address()` for the bound address and `stop().await` for awaited
   shutdown. Dropping the handle only signals shutdown.
@@ -68,7 +69,7 @@ Cache stats:
 - The crate uses the default global Prometheus registry. Tests or examples that
   register extra metrics should use unique metric names to avoid process-global
   registration conflicts.
-- Registered module metrics should use one `OnceLock<Metrics>` per module and
+- Registered module metrics should use one `MetricsCell<Metrics>` per module and
   one `register_metrics!(Metrics, METRICS)` invocation. Keep metric handles private and
   expose only the module-level setters needed by local callers.
 - Consumers should start the server through `init_metrics!` or

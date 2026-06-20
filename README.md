@@ -10,6 +10,8 @@
   and author labels;
 - `register_metrics!(Metrics, METRICS)` registers module-owned metrics for automatic
   initialization during `init_metrics!` / `init_metrics_impl`;
+- `MetricsCell` stores fallibly initialized module metrics while still allowing
+  direct field access after startup;
 - `MetricsServer::stop()` provides awaited shutdown, with best-effort shutdown
   on drop;
 - `CacheStatsMetric` records cache request and miss counters;
@@ -45,7 +47,7 @@ Use `register_metrics!(Metrics, METRICS)` when a crate or module owns private me
 that should be initialized automatically on app startup.
 
 ```rust
-use std::sync::OnceLock;
+use stonfi_metrics::MetricsCell;
 
 pub(super) struct Metrics {
     requests_total: prometheus::IntCounterVec,
@@ -63,23 +65,20 @@ impl Metrics {
     }
 
     pub(super) fn inc_request(kind: &str) {
-        Metrics::get()
-            .requests_total
-            .with_label_values(&[kind])
-            .inc();
+        METRICS.requests_total.with_label_values(&[kind]).inc();
     }
 }
 
-static METRICS: OnceLock<Metrics> = OnceLock::new();
+static METRICS: MetricsCell<Metrics> = MetricsCell::new();
 
 stonfi_metrics::register_metrics!(Metrics, METRICS);
 ```
 
 The macro assumes `Metrics::new() -> anyhow::Result<Metrics>` and
-`static METRICS: OnceLock<Metrics>`. It also generates a module-local
-`Metrics::get() -> &'static Metrics` accessor for code that runs after metrics
-startup. The struct, static, and helper methods can remain private to the
-module.
+`static METRICS: MetricsCell<Metrics>`. `init_metrics!` / `init_metrics_impl`
+initialize the cell before the metrics server starts, so code that runs after
+startup can access fields directly through `METRICS`. The struct, static, and
+helper methods can remain private to the module.
 
 ## Duration Tracking
 

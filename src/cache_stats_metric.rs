@@ -1,10 +1,10 @@
 use parking_lot::Mutex;
 use prometheus::{IntCounterVec, register_int_counter_vec};
 
-static CACHE_STATS: Mutex<Option<IntCounterVec>> = Mutex::new(None);
+static CACHE_STATS_METRICS: Mutex<Option<IntCounterVec>> = Mutex::new(None);
 
 pub(super) fn init_cache_stats_metric() -> anyhow::Result<()> {
-    let mut cache_stats = CACHE_STATS.lock();
+    let mut cache_stats = CACHE_STATS_METRICS.lock();
     if cache_stats.is_some() {
         return Ok(());
     }
@@ -37,7 +37,7 @@ impl CacheStatsMetric {
 }
 
 fn inc(cache_name: &str, result: &str) {
-    let cache_stats = CACHE_STATS.lock();
+    let cache_stats = CACHE_STATS_METRICS.lock();
     let Some(metric) = cache_stats.as_ref() else {
         return;
     };

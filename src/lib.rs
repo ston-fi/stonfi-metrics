@@ -20,8 +20,10 @@ use crate::server::MetricsServer;
 mod base_metrics;
 mod cache_stats_metric;
 mod initializer;
+mod metrics_cell;
 
 pub use crate::cache_stats_metric::CacheStatsMetric;
+pub use crate::metrics_cell::MetricsCell;
 
 /// Start a metrics server using compile-time package and CI metadata.
 ///
@@ -41,7 +43,7 @@ macro_rules! init_metrics {
 
 /// Register a module-owned metrics struct for automatic startup initialization.
 ///
-/// The target module must provide `static METRICS: OnceLock<Metrics>` and
+/// The target module must provide `static METRICS: MetricsCell<Metrics>` and
 /// `Metrics::new() -> anyhow::Result<Metrics>`.
 #[macro_export]
 macro_rules! register_metrics {
@@ -78,18 +80,6 @@ macro_rules! register_metrics {
                 }
             }
         };
-
-        impl $metrics_ty {
-            fn get() -> &'static Self {
-                match $metrics_static.get() {
-                    Some(metrics) => metrics,
-                    None => panic!(
-                        "metrics used before initialization: {}",
-                        concat!(module_path!(), "::", stringify!($metrics_ty))
-                    ),
-                }
-            }
-        }
     };
 }
 
