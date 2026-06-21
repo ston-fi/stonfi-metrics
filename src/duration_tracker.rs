@@ -35,9 +35,9 @@ pub struct DurationTrackerVec<'a, 'b, 'c> {
     start: std::time::Instant,
 }
 
-impl DurationTrackerVec<'_, '_, '_> {
+impl<'a, 'b, 'c> DurationTrackerVec<'a, 'b, 'c> {
     /// Start a timer for `metric` with `labels`.
-    pub fn new<'a, 'b, 'c>(
+    pub fn new(
         metric: &'a prometheus::HistogramVec,
         labels: &'b [&'c str],
     ) -> DurationTrackerVec<'a, 'b, 'c> {
@@ -51,6 +51,11 @@ impl DurationTrackerVec<'_, '_, '_> {
     /// Return elapsed time without recording it.
     pub fn elapsed(&self) -> std::time::Duration {
         self.start.elapsed()
+    }
+
+    /// Replace the labels used when recording the elapsed duration on drop.
+    pub fn update_labels(&mut self, labels: &'b [&'c str]) {
+        self.labels = labels;
     }
 }
 
