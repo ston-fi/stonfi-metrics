@@ -31,10 +31,21 @@ uptime metadata, cache stats counters, and duration tracking helpers.
   `listen_address()` for the bound address and `stop().await` for awaited
   shutdown. Dropping the handle only signals shutdown.
 - `CacheStatsMetric`: global cache counter helper. Call after metrics
-  initialization.
+  initialization to count cache requests and misses with stable labels.
 - `track_duration!`: RAII timer macro for `prometheus::Histogram` and
-  `prometheus::HistogramVec`.
-- `constants`: reusable histogram bucket presets in milliseconds.
+  `prometheus::HistogramVec`. It creates `DurationTracker` for plain
+  histograms and `DurationTrackerVec` for labeled histograms.
+- `duration_tracker::DurationTracker`: explicit RAII timer for a
+  `prometheus::Histogram`; it observes elapsed milliseconds on drop and exposes
+  `elapsed()` for interim checks and `start_time()` for the original
+  `std::time::Instant`.
+- `duration_tracker::DurationTrackerVec`: explicit RAII timer for a
+  `prometheus::HistogramVec`; use `update_labels()` when the final labels are
+  known only after work starts, such as after a request result or error
+  classification is determined. It also exposes `elapsed()` and `start_time()`.
+- `constants`: reusable histogram bucket presets in milliseconds. Prefer these
+  for duration metrics unless the service owns a clearly different latency
+  contract.
 
 ## Exported Metrics
 
@@ -42,12 +53,26 @@ Base metrics:
 
 - `stonfi_metrics_uptime_seconds`
 - labels: `version`, `commit`, `author`
+- implemented by the internal `BaseMetrics`; do not expose or duplicate it in
+  consumers. Start metrics through `init_metrics!` / `init_metrics_impl` so the
+  base uptime gauge is registered and refreshed by the `/metrics` handler.
 
 Cache stats:
 
 - `stonfi_metrics_cache_stats_total`
 - labels: `cache_name`, `result`
 - result values: `request`, `miss`
+- recorded through `CacheStatsMetric::inc_request(cache_name)` and
+  `CacheStatsMetric::inc_miss(cache_name)`. It is for generic cache access
+  accounting only; use module-owned metrics for cache latency, size,
+  invalidation, or domain-specific labels.
+
+Duration constants:
+
+- `constants::DURATION_BUCKETS_1MS_20S`: exponential millisecond buckets for
+  normal request, workflow, and dependency latency metrics.
+- `constants::DURATION_BUCKETS_01MS_20S`: finer sub-millisecond first bucket for
+  very fast in-process operations while still covering long tail latency.
 
 ## Public Crate Expectations
 
@@ -70,6 +95,12 @@ Cache stats:
 - The crate uses the default global Prometheus registry. Tests or examples that
   register extra metrics should use unique metric names to avoid process-global
   registration conflicts.
+- Use the upstream `prometheus` crate path for collector macros and types in
+  examples and consumer guidance. Prefer
+  `prometheus::register_histogram_vec!`, `prometheus::register_int_counter_vec!`,
+  `prometheus::HistogramVec`, etc. Do not guide consumers toward
+  `stonfi_metrics::prometheus::register_histogram_vec!`; the re-export exists
+  only as a convenience for crate users that need the dependency path.
 - Use `MetricsCell<T>` for fallible global metric storage. Do not add new
   `Mutex<Option<T>>`, `OnceLock<Result<T, _>>`, or `LazyLock<T>` patterns for
   metric handles.
@@ -77,9 +108,19 @@ Cache stats:
   Cache stats and consumer module metrics should use `register_metrics!`.
   Keep all metric storage on `MetricsCell::init` so registration errors surface
   from `init_metrics_impl`.
-- Registered module metrics should use one `MetricsCell<Metrics>` per module and
-  one `register_metrics!(Metrics, METRICS)` invocation. Keep metric handles private and
-  expose only the module-level setters needed by local callers.
+- Registered module metrics should use one `MetricsCell<Metrics>` per module
+  and one `register_metrics!(Metrics, METRICS)` invocation. Keep metric handles
+  private and expose only the module-level setters needed by local callers.
+- For duration histograms, record milliseconds and name metrics with an `_ms`
+  suffix. Use `track_duration!` for simple scoped timing. Use
+  `DurationTracker` / `DurationTrackerVec` directly when the code needs
+  `elapsed()`, `start_time()`, or `DurationTrackerVec::update_labels()` before
+  the guard drops.
+- Keep `CacheStatsMetric` limited to request/miss counters. Do not extend it
+  with service-specific labels; create module-owned metrics instead.
+- Keep `BaseMetrics` internal to startup and collection. Consumers should
+  configure the label values through `init_metrics!` or `init_metrics_impl`,
+  not by reaching for base metric storage.
 - Consumers should start the server through `init_metrics!` or
   `init_metrics_impl`; `MetricsServer::start` is intentionally crate-private.
 - Keep metric names stable once published.

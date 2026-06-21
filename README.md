@@ -15,7 +15,8 @@
 - `MetricsServer::stop()` provides awaited shutdown, with best-effort shutdown
   on drop;
 - `CacheStatsMetric` records cache request and miss counters;
-- duration tracking helpers observe elapsed time into Prometheus histograms.
+- duration tracking helpers observe elapsed time into Prometheus histograms and
+  expose timing state when explicit guards are needed.
 
 ## Basic Usage
 
@@ -89,7 +90,10 @@ Use `track_duration!` with a `prometheus::Histogram` or `HistogramVec`.
 let _timer = stonfi_metrics::track_duration!(request_duration, &["GET"]);
 ```
 
-The timer observes elapsed milliseconds when dropped.
+The timer observes elapsed milliseconds when dropped. Use
+`duration_tracker::DurationTracker` or `DurationTrackerVec` directly when code
+needs to read `elapsed()`, inspect the original `start_time()`, or call
+`DurationTrackerVec::update_labels()` before the guard is dropped.
 
 ## Development
 

@@ -19,6 +19,11 @@ impl DurationTracker<'_> {
     pub fn elapsed(&self) -> std::time::Duration {
         self.start.elapsed()
     }
+
+    /// Return the instant captured when the timer was created.
+    pub fn start_time(&self) -> std::time::Instant {
+        self.start
+    }
 }
 
 impl Drop for DurationTracker<'_> {
@@ -51,6 +56,11 @@ impl<'a, 'b, 'c> DurationTrackerVec<'a, 'b, 'c> {
     /// Return elapsed time without recording it.
     pub fn elapsed(&self) -> std::time::Duration {
         self.start.elapsed()
+    }
+
+    /// Return the instant captured when the timer was created.
+    pub fn start_time(&self) -> std::time::Instant {
+        self.start
     }
 
     /// Replace the labels used when recording the elapsed duration on drop.
