@@ -73,6 +73,8 @@ Duration constants:
   normal request, workflow, and dependency latency metrics.
 - `constants::DURATION_BUCKETS_01MS_20S`: finer sub-millisecond first bucket for
   very fast in-process operations while still covering long tail latency.
+- `constants::DURATION_BUCKETS_1S_2M`: exponential millisecond buckets for
+  longer-running workflows or dependencies where sub-second detail is not useful.
 
 ## Public Crate Expectations
 

@@ -95,6 +95,20 @@ The timer observes elapsed milliseconds when dropped. Use
 needs to read `elapsed()`, inspect the original `start_time()`, or call
 `DurationTrackerVec::update_labels()` before the guard is dropped.
 
+Reusable duration bucket presets are available under `stonfi_metrics::constants`.
+Use `DURATION_BUCKETS_1MS_20S` for normal request, workflow, and dependency
+latency metrics, `DURATION_BUCKETS_01MS_20S` for very fast in-process
+operations, and `DURATION_BUCKETS_1S_2M` for longer-running workflows or
+dependencies where sub-second detail is not useful.
+
+```rust
+let operation_duration = prometheus::register_histogram!(
+    "my_operation_duration_ms",
+    "Operation duration in milliseconds",
+    stonfi_metrics::constants::DURATION_BUCKETS_1S_2M.to_vec()
+)?;
+```
+
 ## Development
 
 ```bash
