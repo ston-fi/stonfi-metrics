@@ -50,10 +50,7 @@ macro_rules! register_metrics {
     ($metrics_ty:ty, $metrics_static:ident) => {
         const _: () = {
             fn __stonfi_metrics_init() -> $crate::__private::anyhow::Result<()> {
-                $metrics_static.init(
-                    concat!(module_path!(), "::", stringify!($metrics_ty)),
-                    <$metrics_ty>::new,
-                )
+                $metrics_static.init(concat!(module_path!(), "::", stringify!($metrics_ty)), <$metrics_ty>::new)
             }
 
             $crate::__private::inventory::submit! {

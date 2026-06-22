@@ -54,10 +54,7 @@ impl<T> Deref for MetricsCell<T> {
     fn deref(&self) -> &Self::Target {
         match self.get() {
             Some(metrics) => metrics,
-            None => panic!(
-                "metrics used before initialization: {}",
-                std::any::type_name::<T>()
-            ),
+            None => panic!("metrics used before initialization: {}", std::any::type_name::<T>()),
         }
     }
 }

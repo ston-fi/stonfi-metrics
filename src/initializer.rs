@@ -13,9 +13,8 @@ inventory::collect!(MetricInitializer);
 
 pub(crate) fn init_registered_metrics() -> anyhow::Result<()> {
     for initializer in inventory::iter::<MetricInitializer> {
-        (initializer.init)().map_err(|error| {
-            anyhow::anyhow!("failed to initialize {} metrics: {error}", initializer.name)
-        })?;
+        (initializer.init)()
+            .map_err(|error| anyhow::anyhow!("failed to initialize {} metrics: {error}", initializer.name))?;
     }
 
     Ok(())
@@ -23,8 +22,7 @@ pub(crate) fn init_registered_metrics() -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    static TEST_REGISTER_MACRO_METRICS: crate::MetricsCell<TestRegisterMacroMetrics> =
-        crate::MetricsCell::new();
+    static TEST_REGISTER_MACRO_METRICS: crate::MetricsCell<TestRegisterMacroMetrics> = crate::MetricsCell::new();
 
     struct TestRegisterMacroMetrics {
         counter: prometheus::IntCounter,

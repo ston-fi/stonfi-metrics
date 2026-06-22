@@ -28,8 +28,7 @@ impl DurationTracker<'_> {
 
 impl Drop for DurationTracker<'_> {
     fn drop(&mut self) {
-        self.metric
-            .observe(format_duration_ms(self.start.elapsed()));
+        self.metric.observe(format_duration_ms(self.start.elapsed()));
     }
 }
 
@@ -42,10 +41,7 @@ pub struct DurationTrackerVec<'a, 'b, 'c> {
 
 impl<'a, 'b, 'c> DurationTrackerVec<'a, 'b, 'c> {
     /// Start a timer for `metric` with `labels`.
-    pub fn new(
-        metric: &'a prometheus::HistogramVec,
-        labels: &'b [&'c str],
-    ) -> DurationTrackerVec<'a, 'b, 'c> {
+    pub fn new(metric: &'a prometheus::HistogramVec, labels: &'b [&'c str]) -> DurationTrackerVec<'a, 'b, 'c> {
         DurationTrackerVec {
             metric,
             labels,

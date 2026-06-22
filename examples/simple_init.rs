@@ -1,8 +1,6 @@
 use std::time::Duration;
 
-use prometheus::{
-    HistogramOpts, HistogramVec, IntCounterVec, register_histogram_vec, register_int_counter_vec,
-};
+use prometheus::{HistogramOpts, HistogramVec, IntCounterVec, register_histogram_vec, register_int_counter_vec};
 use stonfi_metrics::constants::DURATION_BUCKETS_1MS_20S;
 use stonfi_metrics::{MetricsCell, track_duration};
 
@@ -41,10 +39,7 @@ impl Metrics {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let metrics_server = stonfi_metrics::init_metrics!("127.0.0.1:0").await?;
-    println!(
-        "listening on http://{}/metrics",
-        metrics_server.listen_address()
-    );
+    println!("listening on http://{}/metrics", metrics_server.listen_address());
     Metrics::inc_requests("GET");
     {
         let _timer = track_duration!(METRICS.request_duration, &["GET"]);

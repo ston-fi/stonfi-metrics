@@ -126,12 +126,8 @@ mod tests {
         assert!(text.contains(option_env!("GITLAB_USER_EMAIL").unwrap_or("local-dev")));
         assert!(text.contains(option_env!("CI_COMMIT_SHORT_SHA").unwrap_or("local")));
         assert!(text.contains("# TYPE stonfi_metrics_cache_stats_total counter"));
-        assert!(text.contains(
-            "stonfi_metrics_cache_stats_total{cache_name=\"test_cache\",result=\"request\"} 1"
-        ));
-        assert!(text.contains(
-            "stonfi_metrics_cache_stats_total{cache_name=\"test_cache\",result=\"miss\"} 1"
-        ));
+        assert!(text.contains("stonfi_metrics_cache_stats_total{cache_name=\"test_cache\",result=\"request\"} 1"));
+        assert!(text.contains("stonfi_metrics_cache_stats_total{cache_name=\"test_cache\",result=\"miss\"} 1"));
 
         metrics_server.stop().await?;
         Ok(())
