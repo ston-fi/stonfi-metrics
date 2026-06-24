@@ -16,6 +16,8 @@ uptime metadata, cache stats counters, and duration tracking helpers.
 
 - `init_metrics!(listen_address)`: starts the metrics server and uses
   compile-time package/CI metadata for base labels.
+- `init_metrics!()`: initializes base and registered metrics without starting
+  the metrics server. Use this in unit tests that need metric handles.
 - `init_metrics_impl(listen_address, version, commit, author)`: same startup
   path with explicit base label values. Prefer this when the default CI metadata
   does not match the consumer's build environment.

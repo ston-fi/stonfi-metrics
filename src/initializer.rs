@@ -60,6 +60,14 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn test_init_metrics_without_server_runs_registered_initializers() -> anyhow::Result<()> {
+        crate::init_metrics!()?;
+
+        let _ = &TEST_REGISTER_MACRO_METRICS.counter;
+        Ok(())
+    }
+
     #[tokio::test]
     async fn test_init_metrics_impl_runs_registered_initializers() -> anyhow::Result<()> {
         let server = crate::init_metrics_impl(

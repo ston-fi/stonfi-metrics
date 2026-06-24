@@ -5,7 +5,8 @@
 `stonfi_metrics` provides small Prometheus helpers used by STON.fi services:
 
 - `init_metrics!` starts an Axum `/metrics` endpoint and registers base build
-  metadata labels;
+  metadata labels, or initializes metrics without a server when called without
+  arguments;
 - `init_metrics_impl` starts the same endpoint with explicit version, commit,
   and author labels;
 - `register_metrics!(Metrics, METRICS)` registers module-owned metrics for
@@ -31,6 +32,9 @@ metrics_server.stop().await?;
 
 Use `init_metrics_impl` when the default compile-time metadata from
 `init_metrics!` does not match the build environment.
+
+For unit tests that need registered metrics but no HTTP server, call
+`stonfi_metrics::init_metrics!()?;`.
 
 ## Metrics
 
@@ -77,10 +81,10 @@ stonfi_metrics::register_metrics!(Metrics, METRICS);
 
 The macro assumes `Metrics::new() -> anyhow::Result<Metrics>` and
 `static METRICS: MetricsCell<Metrics>`. `init_metrics!` / `init_metrics_impl`
-initialize the cell before the metrics server starts, so code that runs after
-startup can access fields directly through `METRICS`. Construction errors are
-returned from startup instead of being hidden behind first metric use. The
-struct, static, and helper methods can remain private to the module.
+initialize the cell before use, so code that runs after startup can access
+fields directly through `METRICS`. Construction errors are returned from startup
+instead of being hidden behind first metric use. The struct, static, and helper
+methods can remain private to the module.
 
 ## Duration Tracking
 

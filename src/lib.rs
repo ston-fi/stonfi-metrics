@@ -27,10 +27,20 @@ pub use crate::metrics_cell::MetricsCell;
 
 /// Start a metrics server using compile-time package and CI metadata.
 ///
+/// Call without arguments to initialize metrics without starting the HTTP
+/// server, such as in unit tests.
+///
 /// Use [`init_metrics_impl`] when version, commit, or author labels should be
 /// provided explicitly by the caller.
 #[macro_export]
 macro_rules! init_metrics {
+    () => {
+        $crate::init_metrics_without_server_impl(
+            option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"),
+            option_env!("CI_COMMIT_SHORT_SHA").unwrap_or("local"),
+            option_env!("GITLAB_USER_EMAIL").unwrap_or("local-dev"),
+        )
+    };
     ($listen_address:expr) => {
         $crate::init_metrics_impl(
             $listen_address,
@@ -73,9 +83,14 @@ pub async fn init_metrics_impl(
     commit: &str,
     author: &str,
 ) -> anyhow::Result<MetricsServer> {
-    init_base_metrics(version, commit, author)?;
-    init_registered_metrics()?;
+    init_metrics_without_server_impl(version, commit, author)?;
     MetricsServer::start(listen_address).await
+}
+
+#[doc(hidden)]
+pub fn init_metrics_without_server_impl(version: &str, commit: &str, author: &str) -> anyhow::Result<()> {
+    init_base_metrics(version, commit, author)?;
+    init_registered_metrics()
 }
 
 #[doc(hidden)]
