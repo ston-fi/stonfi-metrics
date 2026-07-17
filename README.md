@@ -113,6 +113,13 @@ let operation_duration = prometheus::register_histogram!(
 )?;
 ```
 
+## Releases
+
+Merges to `main` run release-plz after the crate validation job succeeds.
+Release-plz uses Git tags as its version source and creates a `v<version>` tag
+and GitHub Release. The workflow does not run `cargo publish` or require a
+crates.io token.
+
 ## Development
 
 ```bash
@@ -124,3 +131,6 @@ RUSTDOCFLAGS='-D warnings' cargo doc --no-deps
 cargo package --allow-dirty --list
 cargo publish --dry-run --allow-dirty
 ```
+
+The publish dry run validates the package locally; it does not upload the crate
+and is separate from the GitHub-only release workflow.
