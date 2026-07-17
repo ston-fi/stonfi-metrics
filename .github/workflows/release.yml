@@ -1,0 +1,52 @@
+name: Release-plz
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: write
+  contents: write
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - run: rustup toolchain install nightly
+      - run: rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
+      - run: cargo test
+      - run: cargo check --example simple_init
+      - run: cargo +nightly fmt --check
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: RUSTDOCFLAGS='-D warnings' cargo doc --no-deps
+
+  release-plz:
+    name: Release-plz
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run release-plz
+        uses: release-plz/action@v0.5
+        with:
+          version: "0.3.160"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

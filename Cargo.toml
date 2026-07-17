@@ -1,0 +1,38 @@
+[package]
+name = "stonfi_metrics"
+description = "Prometheus metrics helpers for STON.fi Rust services"
+version = "0.0.1"
+edition = "2024"
+authors = ["STON.fi", "Sild <silddev@pm.com"]
+license = "Apache-2.0"
+repository = "https://github.com/ston-fi/stonfi-metrics"
+rust-version = "1.85"
+readme = "README.md"
+publish = true
+
+include = [
+    "AGENTS.md",
+    "Cargo.toml",
+    "README.md",
+    "src/*",
+    "src/initializer/*",
+    "examples/*",
+]
+
+[dependencies]
+anyhow = "1"
+axum = "0.8"
+inventory = "0.3"
+prometheus = "0.14"
+tokio = { version = "1", features = ["macros", "net", "rt", "rt-multi-thread", "sync", "time"] }
+tracing = "0.1"
+
+[dev-dependencies]
+reqwest = "0.12"
+tokio = { version = "1", features = ["macros", "net", "rt", "rt-multi-thread", "sync", "time"] }
+
+[[example]]
+name = "simple_init"
+
+[profile.release]
+debug = true
