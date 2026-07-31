@@ -11,8 +11,9 @@
   and author labels;
 - `register_metrics!(Metrics, METRICS)` registers module-owned metrics for
   automatic initialization during `init_metrics!` / `init_metrics_impl`;
-- `MetricsCell` stores fallibly initialized metrics and still allows direct
-  field access after startup;
+- `MetricsCell` stores fallibly initialized metrics, allows direct field access
+  after startup, and lazily initializes an accessed registered cell when
+  startup was skipped;
 - `MetricsServer::stop()` provides awaited shutdown, with best-effort shutdown
   on drop;
 - `CacheStatsMetric` records cache request and miss counters;
@@ -83,8 +84,16 @@ The macro assumes `Metrics::new() -> anyhow::Result<Metrics>` and
 `static METRICS: MetricsCell<Metrics>`. `init_metrics!` / `init_metrics_impl`
 initialize the cell before use, so code that runs after startup can access
 fields directly through `METRICS`. Construction errors are returned from startup
-instead of being hidden behind first metric use. The struct, static, and helper
-methods can remain private to the module.
+instead of being hidden behind first metric use.
+
+If a registered cell is accessed before explicit startup, `MetricsCell`
+initializes only that cell and emits a warning after successful initialization.
+If construction fails, direct access panics with the constructor error and a
+later access retries. Prefer explicit startup so initialization failures remain
+ordinary `Result` errors. Calling `get()` does not trigger lazy initialization.
+`Metrics::new()` must not access its own cell or create a cycle between metrics
+cell initializers because construction holds the cell's initialization lock.
+The struct, static, and helper methods can remain private to the module.
 
 ## Duration Tracking
 

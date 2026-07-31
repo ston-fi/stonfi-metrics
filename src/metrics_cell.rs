@@ -3,9 +3,18 @@ use std::sync::{Mutex, OnceLock};
 
 /// Fallibly initialized storage for module-owned metrics.
 ///
-/// Register this with [`crate::register_metrics!`] and access fields after
-/// [`crate::init_metrics_impl`] has completed successfully. Access before
-/// startup completion panics because direct field access has no error channel.
+/// Register this with [`crate::register_metrics!`]. Accessing fields before
+/// explicit metrics startup lazily initializes this cell and emits a warning.
+/// Prefer [`crate::init_metrics_impl`] so initialization failures are returned
+/// during startup.
+///
+/// Initializers run while holding the cell's initialization lock. They must not
+/// access their own cell or create a cyclic dependency between metrics cells.
+///
+/// # Panics
+///
+/// Dereferencing an uninitialized cell panics when its registered initializer
+/// fails or when the cell was not registered with [`crate::register_metrics!`].
 pub struct MetricsCell<T> {
     metrics: OnceLock<T>,
     init_lock: Mutex<()>,
@@ -26,19 +35,30 @@ impl<T> MetricsCell<T> {
     }
 
     /// Initialize metrics once.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the initializer fails or the initialization lock
+    /// is poisoned.
     pub fn init(&self, name: &str, init: impl FnOnce() -> anyhow::Result<T>) -> anyhow::Result<()> {
+        self.init_if_needed(name, init).map(|_| ())
+    }
+
+    pub(crate) fn init_if_needed(&self, name: &str, init: impl FnOnce() -> anyhow::Result<T>) -> anyhow::Result<bool> {
         let _guard = self
             .init_lock
             .lock()
             .map_err(|_| anyhow::anyhow!("metrics initializer lock poisoned: {name}"))?;
 
         if self.get().is_some() {
-            return Ok(());
+            return Ok(false);
         }
 
         self.metrics
             .set(init()?)
-            .map_err(|_| anyhow::anyhow!("metrics already initialized: {name}"))
+            .map_err(|_| anyhow::anyhow!("metrics already initialized: {name}"))?;
+
+        Ok(true)
     }
 }
 
@@ -54,7 +74,10 @@ impl<T> Deref for MetricsCell<T> {
     fn deref(&self) -> &Self::Target {
         match self.get() {
             Some(metrics) => metrics,
-            None => panic!("metrics used before initialization: {}", std::any::type_name::<T>()),
+            None => match crate::initializer::init_registered_metric(self) {
+                Ok(metrics) => metrics,
+                Err(error) => panic!("failed to initialize metrics on first use: {error:#}"),
+            },
         }
     }
 }

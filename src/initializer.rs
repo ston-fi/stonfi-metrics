@@ -1,3 +1,6 @@
+use crate::metrics_cell::MetricsCell;
+use anyhow::Context as _;
+
 /// Registered initializer for module-owned Prometheus metrics.
 ///
 /// Initializers are submitted by [`crate::register_metrics!`] and executed by
@@ -11,6 +14,19 @@ pub struct MetricInitializer {
 
 inventory::collect!(MetricInitializer);
 
+/// Registered initializer used to lazily initialize one exact metrics cell.
+#[doc(hidden)]
+pub struct LazyMetricInitializer {
+    /// Human-readable initializer name used in warnings and errors.
+    pub name: &'static str,
+    /// Returns whether this initializer owns the erased metrics cell.
+    pub matches_cell: fn(*const ()) -> bool,
+    /// Initializes the cell and returns whether this call performed initialization.
+    pub init: fn() -> anyhow::Result<bool>,
+}
+
+inventory::collect!(LazyMetricInitializer);
+
 pub(crate) fn init_registered_metrics() -> anyhow::Result<()> {
     for initializer in inventory::iter::<MetricInitializer> {
         (initializer.init)()
@@ -18,6 +34,36 @@ pub(crate) fn init_registered_metrics() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+pub(crate) fn init_registered_metric<T>(cell: &MetricsCell<T>) -> anyhow::Result<&T> {
+    let cell_ptr = std::ptr::from_ref(cell).cast::<()>();
+    let initializer = inventory::iter::<LazyMetricInitializer>
+        .into_iter()
+        .find(|initializer| (initializer.matches_cell)(cell_ptr))
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "metrics cell {} is not registered with register_metrics!",
+                std::any::type_name::<T>()
+            )
+        })?;
+
+    let initialized =
+        (initializer.init)().with_context(|| format!("failed to initialize {} metrics", initializer.name))?;
+
+    if initialized {
+        tracing::warn!(
+            metrics = initializer.name,
+            "metrics accessed before explicit initialization; initialized on first use"
+        );
+    }
+
+    cell.get().ok_or_else(|| {
+        anyhow::anyhow!(
+            "{} metrics initializer completed without initializing its cell",
+            initializer.name
+        )
+    })
 }
 
 #[cfg(test)]
