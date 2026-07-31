@@ -93,12 +93,17 @@ Duration constants:
   `README.md`, and rustdoc for affected public items.
 - If crate manifest metadata, README paths, or package includes change, verify
   the packaged crate content before reporting completion.
-- Release automation is GitHub-only. Keep `release-plz.toml` in git-only mode
-  with registry publishing disabled so releases create a `v<version>` tag and
-  GitHub Release without running `cargo publish` or requiring a crates.io token.
-- Treat `cargo publish --dry-run` as package validation only. Do not add
-  registry credentials or enable automated registry publishing without an
-  explicit release-policy change.
+- Release automation runs in GitHub Actions through release-plz. Keep registry
+  publishing enabled so release-plz publishes an unpublished manifest version
+  to crates.io and creates its `v<version>` tag and GitHub Release.
+- Store the crates.io API token only in the protected
+  `CRATES_IO_REGISTRY_TOKEN` GitHub Actions secret. Map it to Cargo's standard
+  `CARGO_REGISTRY_TOKEN` environment variable only inside the release job. The
+  initial crate publication requires a token with `publish-new`; never commit
+  or print registry credentials.
+- Release-plz owns future version and changelog pull requests. Treat
+  `cargo publish --dry-run` as package validation only; do not publish manually
+  or create release tags outside the validated release workflow.
 - Do not commit local build artifacts, `target/`, editor files, or `Cargo.lock`
   unless the repository policy changes.
 

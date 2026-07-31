@@ -20,6 +20,13 @@
 - duration tracking helpers observe elapsed time into Prometheus histograms and
   expose timing state when explicit guards are needed.
 
+## Installation
+
+```toml
+[dependencies]
+stonfi_metrics = "0.1.0"
+```
+
 ## Basic Usage
 
 ```rust
@@ -125,9 +132,10 @@ let operation_duration = prometheus::register_histogram!(
 ## Releases
 
 Merges to `main` run release-plz after the crate validation job succeeds.
-Release-plz uses Git tags as its version source and creates a `v<version>` tag
-and GitHub Release. The workflow does not run `cargo publish` or require a
-crates.io token.
+Release-plz publishes an unpublished manifest version to crates.io, creates the
+matching `v<version>` tag and GitHub Release, and opens or updates the next
+version and changelog pull request. The workflow reads the crates.io API token
+from the `CRATES_IO_REGISTRY_TOKEN` GitHub Actions secret.
 
 ## Development
 
@@ -141,5 +149,4 @@ cargo package --allow-dirty --list
 cargo publish --dry-run --allow-dirty
 ```
 
-The publish dry run validates the package locally; it does not upload the crate
-and is separate from the GitHub-only release workflow.
+The publish dry run validates the package locally without uploading it.
