@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2](https://github.com/ston-fi/stonfi-metrics/compare/v0.0.1...v0.0.2) - 2026-07-31
+
+### Other
+
+- initialize registered cells on first access
+
 ## [0.0.1](https://github.com/ston-fi/stonfi-metrics/releases/tag/v0.0.1) - 2026-07-17
 
 ### Added

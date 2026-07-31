@@ -1,7 +1,7 @@
 [package]
 name = "stonfi_metrics"
 description = "Prometheus metrics helpers for STON.fi Rust services"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 authors = ["STON.fi", "Sild <silddev@pm.com"]
 license = "Apache-2.0"
