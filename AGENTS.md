@@ -27,8 +27,10 @@ uptime metadata, cache stats counters, and duration tracking helpers.
   expects `Metrics::new() -> anyhow::Result<Metrics>` and
   `static METRICS: stonfi_metrics::MetricsCell<Metrics>`.
 - `MetricsCell`: fallibly initialized metrics storage. It serializes
-  initialization, stores successful metrics once, and dereferences to `Metrics`
-  after startup so local setters can use direct field access.
+  initialization and stores successful metrics once. Direct field access before
+  explicit startup initializes only that registered cell, emits a warning after
+  success, and panics with the constructor error on failure. `get()` remains a
+  non-initializing state check.
 - `server::MetricsServer`: handle returned by initialization. Use
   `listen_address()` for the bound address and `stop().await` for awaited
   shutdown. Dropping the handle only signals shutdown.
@@ -118,9 +120,16 @@ Duration constants:
   Cache stats and consumer module metrics should use `register_metrics!`.
   Keep all metric storage on `MetricsCell::init` so registration errors surface
   from `init_metrics_impl`.
+- Prefer explicit `init_metrics!` / `init_metrics_impl` startup so all
+  registration errors are returned together. Treat lazy `MetricsCell`
+  initialization as a first-use fallback for one registered cell, not as global
+  metrics startup.
 - Registered module metrics should use one `MetricsCell<Metrics>` per module
   and one `register_metrics!(Metrics, METRICS)` invocation. Keep metric handles
   private and expose only the module-level setters needed by local callers.
+- Metrics constructors run while holding their cell's initialization lock. They
+  must not access their own cell or create cyclic dependencies between metrics
+  cell initializers.
 - For duration histograms, record milliseconds and name metrics with an `_ms`
   suffix. Use `track_duration!` for simple scoped timing. Use
   `DurationTracker` / `DurationTrackerVec` directly when the code needs

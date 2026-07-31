@@ -1,8 +1,8 @@
-//! Prometheus helpers for STON.fi services.
+//! Prometheus initialization, serving, cache counters, and duration tracking
+//! for STON.fi services.
 //!
-//! The crate starts an Axum `/metrics` endpoint, registers base uptime metrics,
-//! initializes module-owned metrics registered through [`register_metrics!`], and exposes
-//! small helpers for cache statistics and duration tracking.
+//! Registered module metrics initialize eagerly during startup or lazily, one
+//! cell at a time, on first access.
 
 // re-export
 pub use prometheus;
@@ -54,19 +54,48 @@ macro_rules! init_metrics {
 /// Register a module-owned metrics struct for automatic startup initialization.
 ///
 /// The target module must provide `static METRICS: MetricsCell<Metrics>` and
-/// `Metrics::new() -> anyhow::Result<Metrics>`.
+/// `Metrics::new() -> anyhow::Result<Metrics>`. Explicit metrics startup
+/// initializes all registered cells and returns construction errors. Direct
+/// access before startup initializes only the accessed cell, emits a warning,
+/// and panics if construction fails.
+///
+/// `Metrics::new()` must not access its own metrics cell or create a cyclic
+/// dependency between metrics cells because initialization holds the cell's
+/// lock while the constructor runs.
 #[macro_export]
 macro_rules! register_metrics {
     ($metrics_ty:ty, $metrics_static:ident) => {
         const _: () = {
+            const __STONFI_METRICS_NAME: &str = concat!(module_path!(), "::", stringify!($metrics_ty));
+
             fn __stonfi_metrics_init() -> $crate::__private::anyhow::Result<()> {
-                $metrics_static.init(concat!(module_path!(), "::", stringify!($metrics_ty)), <$metrics_ty>::new)
+                $metrics_static.init(__STONFI_METRICS_NAME, <$metrics_ty>::new)
+            }
+
+            fn __stonfi_metrics_init_on_access() -> $crate::__private::anyhow::Result<bool> {
+                $crate::__private::init_metrics_cell_on_access(
+                    &$metrics_static,
+                    __STONFI_METRICS_NAME,
+                    <$metrics_ty>::new,
+                )
+            }
+
+            fn __stonfi_metrics_matches_cell(cell: *const ()) -> bool {
+                ::std::ptr::eq(::std::ptr::from_ref(&$metrics_static).cast::<()>(), cell)
             }
 
             $crate::__private::inventory::submit! {
                 $crate::__private::MetricInitializer {
-                    name: concat!(module_path!(), "::", stringify!($metrics_ty)),
+                    name: __STONFI_METRICS_NAME,
                     init: __stonfi_metrics_init,
+                }
+            }
+
+            $crate::__private::inventory::submit! {
+                $crate::__private::LazyMetricInitializer {
+                    name: __STONFI_METRICS_NAME,
+                    matches_cell: __stonfi_metrics_matches_cell,
+                    init: __stonfi_metrics_init_on_access,
                 }
             }
         };
@@ -95,7 +124,15 @@ pub fn init_metrics_without_server_impl(version: &str, commit: &str, author: &st
 
 #[doc(hidden)]
 pub mod __private {
-    pub use crate::initializer::MetricInitializer;
+    pub use crate::initializer::{LazyMetricInitializer, MetricInitializer};
     pub use anyhow;
     pub use inventory;
+
+    pub fn init_metrics_cell_on_access<T>(
+        metrics: &crate::MetricsCell<T>,
+        name: &str,
+        init: impl FnOnce() -> anyhow::Result<T>,
+    ) -> anyhow::Result<bool> {
+        metrics.init_if_needed(name, init)
+    }
 }
